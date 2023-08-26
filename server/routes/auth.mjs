@@ -1,96 +1,80 @@
-
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import {
-    stringToHash,
-    varifyHash
-} from "bcrypt-inzi";
-import { client } from '../db.mjs';
+import { hash, compare } from "bcrypt-inzi"; // Assuming this is the correct import
+import { connectToDatabase } from '../db.mjs';
 
 const router = express.Router();
-const col = client.db("sample_airbnb").collection("listingsAndReviews");
 
-router.post('/login', async (req, res, next) => {
-    // login logic
-    if (!(req.body.email || req.body.password)) {
-        res.status(400).json({ message: 'Please fill in all fields' })
+router.post('/login', async (req, res) => {
+    try {
+        const db = await connectToDatabase();
+        const userCollection = db.collection("users"); // Adjust collection name accordingly
+
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Please fill in all fields' });
+        }
+
+        const user = await userCollection.findOne({ email: email.toLowerCase() });
+
+        if (!user) {
+            return res.status(400).json({ message: 'User does not exist' });
+        }
+
+        const isPasswordValid = await compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(400).json({ message: 'Invalid password' });
+        }
+
+        const token = jwt.sign({
+            id: user._id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            isAdmin: false,
+        }, 'SECRET', { expiresIn: '24h' });
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: true,
+        });
+
+        return res.status(200).json({ message: 'Login successful', token: token });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
-    else {
-        req.body.email = req.body.email.toLowerCase();
+});
 
-        try {
-            let result = await userCollection.findOne({ email: req.body.email });
-            console.log("result: ", result);
+router.post('/register', async (req, res) => {
+    try {
+        const db = await connectToDatabase();
+        const userCollection = db.collection("users"); // Adjust collection name accordingly
 
-            if (!result) {
-                res.status(400).json({ message: 'User does not exist' })
+        const { firstName, lastName, email, password } = req.body;
+        if (!firstName || !lastName || !email || !password) {
+            return res.status(400).json({ message: 'Please fill in all fields' });
+        }
+        else {
+            const user = await userCollection.findOne({ email: email.toLowerCase() });
+            if (user) {
+                return res.status(400).json({ message: 'User already exists' });
             }
             else {
-                // compare password
-                let isPasswordValid = await varifyHash(req.body.password, result.password);
-                if (!isPasswordValid) {
-                    res.status(400).json({ message: 'Invalid password' })
-                }
-                else {
-                    // generate token
-                    let token = jwt.sign({
-                        id: result._id,
-                        firstName: result.firstName,
-                        lastName: result.lastName,
-                        email: result.email,
-                        isAdmin: false,
-                    }, 'SECRET', { expiresIn: '24h' });
-
-                    res.cookie('token', token, {
-                        httpOnly: true,
-                        secure: true,
-                    });
-                    
-                    res.status(200).json({ message: 'Login successful', token: token })
-                }
+                const hashedPassword = await stringToHash(password);
+                const newUser = {
+                    firstName: firstName,
+                    lastName: lastName,
+                    email: email.toLowerCase(),
+                    password: hashedPassword,
+                    createdOn: new Date(),
+                };
+                await userCollection.insertOne(newUser);
+                return res.status(200).json({ message: 'User successfully registered' });
             }
         }
-        catch (error) {
-            console.error(error);
-            res.status(500).json({ message: 'Internal server error' })
-        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
 })
-
-router.post('/register', async (req, res, next) => {
-    // register logic
-    if (!(req.body.firstName || req.body.lastName || req.body.email || req.body.password)) {
-        res.status(400).json({ message: 'Please fill in all fields' })
-    } else {
-        req.body.email = req.body.email.toLowerCase();
-        try {
-            let result = await userCollection.findOne({ email: req.body.email });
-            console.log("result: ", result);
-
-            if (result) {
-                res.status(400).json({ message: 'User already exists' })
-            } else {
-                // hash password
-                req.body.password = await stringToHash(req.body.password);
-                // save user
-                result = await userCollection.insertOne(
-                    {
-                        firstName: req.body.firstName,
-                        lastName: req.body.lastName,
-                        email: req.body.email,
-                        password: req.body.password,
-                        createdOn: new Date(),
-                    }
-                );
-                // return success message
-                res.status(200).json({ message: 'User created successfully' })
-            }
-
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: 'Internal server error' })
-        }
-    }
-})
-
-export default router;
