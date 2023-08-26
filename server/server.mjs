@@ -2,20 +2,21 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { decode } from 'punycode';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser'
 
 import authRouter from './routes/auth.mjs';
-import { client } from './db.mjs';
+import { closeDatabaseConnection } from './db.mjs';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 5000;
+
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
+app.use(cookieParser());
 
 app.get('/', (req, res) => {
     res.status(200).send({
@@ -23,29 +24,29 @@ app.get('/', (req, res) => {
     });
 })
 
-
-app.use(cookieParser());
-
 app.use('/auth', authRouter);
 
 app.use((req, res, next) => {
-    let token = req.cookies.token;
+    const token = req.cookies.token;
     if (!token) {
-        res.status(401).json({ message: 'Unauthorized' })
+        return res.status(401).json({ message: 'Unauthorized' });
     }
-    else {
-        jwt.verify(token, process.env.SECRET, (err, decoded) => {
-            if (err) {
-                res.status(401).json({ message: 'Unauthorized' })
-            }
-            else {
-                req.user = decoded;
-                next();
-            }
-        })
-    }
+
+    jwt.verify(token, process.env.SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+        req.user = decoded;
+        next();
+    });
 })
 
-app.listen(port, () => {
-    console.log(`Server is listening on port ${port}`)
-})
+// Close the database connection when the server is stopped
+process.on('SIGINT', async () => {
+    await closeDatabaseConnection();
+    process.exit(0);
+});
+
+app.listen(port, async () => {
+    console.log(`Server is listening on port http://localhost:${port}`);
+});
