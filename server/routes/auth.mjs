@@ -1,6 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import { hash, compare } from "bcrypt-inzi"; // Assuming this is the correct import
+import { stringToHash, varifyHash, verifyHash } from "bcrypt-inzi"; // Assuming this is the correct import
 import { connectToDatabase } from '../db.mjs';
 
 const router = express.Router();
@@ -21,7 +21,7 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'User does not exist' });
         }
 
-        const isPasswordValid = await compare(password, user.password);
+        const isPasswordValid = await verifyHash(password, user.password);
         if (!isPasswordValid) {
             return res.status(400).json({ message: 'Invalid password' });
         }
@@ -78,3 +78,5 @@ router.post('/register', async (req, res) => {
         return res.status(500).json({ message: 'Internal server error' });
     }
 })
+
+export default router;
