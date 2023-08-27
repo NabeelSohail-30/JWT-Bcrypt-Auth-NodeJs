@@ -3,38 +3,34 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import validateRegisterInput from "../../validation/register";
 import validateLoginInput from "../../validation/login";
-import User from "../../db/userSchema.mjs";
+import User from "../../models/UserSchema";
 
 const router = express.Router();
 
-router.post("/register", async (req, res) => {
+router.post("/signup", async (req, res) => {
     try {
-        const { errors, isValid } = validateRegisterInput(req.body);
+        const { firstName, lastName, email, password } = req.body;
 
-        if (!isValid) {
-            return res.status(400).json(errors);
+        if (!firstName || !lastName || !email || !password) {
+            return res.status(400).json({ message: "All fields are required" });
         }
 
-        const user = await User.findOne({ email: req.body.email });
-
-        if (user) {
-            return res.status(400).json({ email: "Email already exists" });
-        } else {
-            const newUser = new User({
-                name: req.body.name,
-                password: req.body.password,
-                email: req.body.email
-            });
-
-            const rounds = 10;
-            const salt = await bcrypt.genSalt(rounds);
-            const hash = await bcrypt.hash(newUser.password, salt);
-
-            newUser.password = hash;
-            const savedUser = await newUser.save();
-
-            res.json(savedUser);
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        if (existingUser) {
+            return res.status(400).json({ message: "User already exists with this email" });
         }
+
+        const passwordHash = await bcrypt.hash(password, 10);
+        const newUser = new User({
+            firstName,
+            lastName,
+            email: email.toLowerCase(),
+            password: passwordHash
+        });
+
+        const savedUser = await newUser.save();
+
+        res.json({ message: "Signup successful", user: savedUser });
     } catch (err) {
         console.error(err);
         res.status(500).send("Server error");
@@ -43,19 +39,16 @@ router.post("/register", async (req, res) => {
 
 router.post("/login", async (req, res) => {
     try {
-        const { errors, isValid } = validateLoginInput(req.body);
+        const { email, password } = req.body;
 
-        if (!isValid) {
-            return res.status(400).json(errors);
+        if (!email || !password) {
+            return res.status(400).json({ message: "Email and password are required" });
         }
 
-        const email = req.body.email;
-        const password = req.body.password;
-
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: email.toLowerCase() });
 
         if (!user) {
-            return res.status(404).json({ emailnotfound: "Email not found" });
+            return res.status(404).json({ message: "Email not found" });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
@@ -70,7 +63,7 @@ router.post("/login", async (req, res) => {
                 payload,
                 process.env.SECRET_KEY,
                 {
-                    expiresIn: '24h'
+                    expiresIn: "24h"
                 },
                 (err, token) => {
                     res.json({
@@ -80,7 +73,7 @@ router.post("/login", async (req, res) => {
                 }
             );
         } else {
-            res.status(400).json({ passwordincorrect: "Password incorrect" });
+            res.status(400).json({ message: "Password incorrect" });
         }
     } catch (err) {
         console.error(err);
