@@ -5,13 +5,10 @@ import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser'
 
-import authRouter from './routes/auth.mjs';
-import { closeDatabaseConnection } from './db.mjs';
-
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 8008;
 
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
