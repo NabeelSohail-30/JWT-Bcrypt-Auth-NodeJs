@@ -1,12 +1,12 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import cookieParser from 'cookie-parser'
+import cookieParser from 'cookie-parser';
 
-import './db/dbConnect.mjs'
-
-dotenv.config();
+import './db/dbConnect.mjs';
 
 const app = express();
 const port = process.env.PORT || 8008;
