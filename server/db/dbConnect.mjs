@@ -1,4 +1,10 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import mongoose from "mongoose";
+
+// console.log("uri: " + process.env.MONGODB_URI);
+// console.log('Current working directory:', process.cwd());
 
 mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
