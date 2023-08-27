@@ -4,6 +4,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser'
 
+import '.db/dbConnect.mjs'
+
 dotenv.config();
 
 const app = express();
