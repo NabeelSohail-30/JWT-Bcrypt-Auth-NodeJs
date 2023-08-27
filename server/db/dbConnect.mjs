@@ -1,24 +1,35 @@
-import { MongoClient } from "mongodb";
-const client = new MongoClient(process.env.MONGODB_URI);
+import mongoose from "mongoose";
 
-async function connectToDatabase() {
-    try {
-        await client.connect();
-        console.log("Successfully connected to Atlas");
-        return client.db("sample_airbnb");
-    } catch (err) {
-        console.error(err);
-        throw err;
-    }
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => {
+    console.log("MongoDB Connected");
+}).catch((err) => {
+    console.log(err);
+});
+
+const db = mongoose.connection;
+
+db.on('connected', () => {
+    console.log('Mongoose is connected');
+}
+);
+
+db.on('error', (err) => {
+    console.log('Mongoose connection error: ', err);
+}
+);
+
+db.on('disconnected', () => {
+    console.log('Mongoose is disconnected');
 }
 
-async function closeDatabaseConnection() {
-    try {
-        await client.close();
-        console.log("Database connection closed");
-    } catch (err) {
-        console.error(err);
-    }
-}
+);
 
-export { connectToDatabase, closeDatabaseConnection };
+process.on('SIGINT', () => {
+    db.close(() => {
+        console.log('Mongoose is disconnected due to application termination');
+        process.exit(0);
+    });
+})
