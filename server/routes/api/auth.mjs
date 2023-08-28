@@ -1,9 +1,9 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import validateRegisterInput from "../../validation/register";
-import validateLoginInput from "../../validation/login";
-import User from "../../models/UserSchema";
+// import validateRegisterInput from "../../validation/register.mjs";
+// import validateLoginInput from "../../validation/login.mjs";
+import User from "../../db/userSchema.mjs";
 
 const router = express.Router();
 

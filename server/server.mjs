@@ -7,7 +7,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
 import './db/dbConnect.mjs';
-import auth from './routes/auth.mjs';
+import auth from './routes/api/auth.mjs';
 
 const app = express();
 const port = process.env.PORT || 8008;
