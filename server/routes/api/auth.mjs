@@ -11,9 +11,14 @@ router.post("/signup", async (req, res) => {
     try {
         const { firstName, lastName, email, password } = req.body;
 
-        // if (!firstName || !lastName || !email || !password) {
-        //     return res.status(400).json({ message: "All fields are required" });
-        // }
+        if (
+            !req.body?.firstName
+            || !req.body?.lastName // family name, sur name
+            || !req.body?.email
+            || !req.body?.password
+        ) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
 
         const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
